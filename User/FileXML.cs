@@ -10,19 +10,17 @@ namespace Manager
     public static class FileXML
     {
         [DataMember()]
-        public static List<Buyer> BuyerList { get; set; } = new List<Buyer>();
-        [DataMember()]
-        public static List<GroceryStore> GroceryStoreList { get; set; } = new List<GroceryStore>();
+        public static List<GroceryStore> Store { get; set; } = new List<GroceryStore>();
         [DataMember()]
         public static List<User> Users { get; set; } = new List<User>();
 
         public static List<GroceryStore> GetStoreWithNull(string userName)
         {
-            GroceryStoreList = DeserializeStore();
-            if (GroceryStoreList != null)
+            Store = DeserializeStore();
+            if (Store != null)
             {
                 List<GroceryStore> result = new List<GroceryStore>();
-                foreach (var item in GroceryStoreList)
+                foreach (var item in Store)
                     if (item.UserName == userName)
                         result.Add(item);
                 if (result.Count != 0)
@@ -46,13 +44,13 @@ namespace Manager
             List<GroceryStore> temp = DeserializeStore();
             if (temp != null)
             {
-                GroceryStoreList = temp;
+                Store = temp;
                 GroceryStore result = null;
-                for (int i = 0; i < GroceryStoreList.Count; i++)
-                    if (GroceryStoreList[i].UserName == userName && GroceryStoreList[i].GetDescription() == null)
+                for (int i = 0; i < Store.Count; i++)
+                    if (Store[i].UserName == userName && Store[i].GetDescription() == null)
                     {
-                        result = GroceryStoreList[i];
-                        GroceryStoreList.RemoveAt(i);
+                        result = Store[i];
+                        Store.RemoveAt(i);
                         break;
                     }
                 if (result != null)
@@ -65,28 +63,16 @@ namespace Manager
             List<GroceryStore> temp = DeserializeStore();
             if (temp != null)
             {
-                GroceryStoreList = temp;
-                for (int i = 0; i < GroceryStoreList.Count; i++)
-                    if (GroceryStoreList[i].UserName == userName && GroceryStoreList[i].GetName() == groceryStore.GetName())
+                Store = temp;
+                for (int i = 0; i < Store.Count; i++)
+                    if (Store[i].UserName == userName && Store[i].GetName() == groceryStore.GetName())
                     {
-                        GroceryStoreList.RemoveAt(i);
-                        GroceryStoreList.Insert(i,groceryStore);
+                        Store.RemoveAt(i);
+                        Store.Insert(i, groceryStore);
                         SerializeStore();
                         break;
                     }
             }
-        }
-        public static Buyer GetBuyerWithNull(string userName, long chartID)
-        {
-            List<Buyer> temp = DeserializeBuyer();
-            if (temp != null)
-            {
-                BuyerList = temp;
-                foreach (var item in BuyerList)
-                    if (item.GetChartID() == chartID && item.GetUserName() == userName)
-                        return item;
-            }
-            return null;
         }
         public static GroceryStore GetStore(int index)
         {
@@ -108,25 +94,6 @@ namespace Manager
                 reader.Close();
                 fs.Close();
                 return deserializedStore;
-            }
-            else
-                return null;
-        }
-        public static List<Buyer> DeserializeBuyer()
-        {
-            if (File.Exists("buyer.xml"))
-            {
-                FileStream fs = new FileStream("buyer.xml", FileMode.Open);
-                XmlDictionaryReader reader =
-                    XmlDictionaryReader.CreateTextReader(fs, new XmlDictionaryReaderQuotas());
-                DataContractSerializer ser = new DataContractSerializer(typeof(List<Buyer>));
-
-                // Deserialize the data and read it from the instance.
-                List<Buyer> deserializedBuyer =
-                    (List<Buyer>)ser.ReadObject(reader, true);
-                reader.Close();
-                fs.Close();
-                return deserializedBuyer;
             }
             else
                 return null;
@@ -187,7 +154,7 @@ namespace Manager
                 DataContractSerializer serUser = new DataContractSerializer(typeof(List<User>));
 
                 // Deserialize the data and read it from the instance.
-                if(user is User)
+                if (user is User)
                     Users = (List<User>)serUser.ReadObject(reader, true);
                 reader.Close();
                 fs.Close();
@@ -195,14 +162,14 @@ namespace Manager
                     if (Users[i].GetChartID() == user.GetChartID() && Users[i].GetUserName() == user.GetUserName())
                     {
                         Users.RemoveAt(i);
-                        if(user.GetRights() == Rights.Admin)
+                        if (user.GetRights() == Rights.Admin)
                             Users.Insert(i, (Admin)user);
-                        else if(user.GetRights() == Rights.Buyer)
+                        else if (user.GetRights() == Rights.Buyer)
                             Users.Insert(i, (Buyer)user);
-                        else if(user.GetRights() == Rights.CreatorBot)
+                        else if (user.GetRights() == Rights.CreatorBot)
                             Users.Insert(i, (Creator)user);
                         else
-                            Users.Insert(i,user);
+                            Users.Insert(i, user);
                         SerializeUser();
                         break;
                     }
@@ -213,33 +180,31 @@ namespace Manager
                 SerializeUser();
             }
         }
-        public static void SetBuyer(Buyer buyer)
+        public static void SetStore(GroceryStore store, Creator creator)
         {
-            if (File.Exists("buyer.xml"))
+            if (File.Exists("store.xml"))
             {
-                FileStream fs = new FileStream("buyer.xml", FileMode.Open);
+                FileStream fs = new FileStream("store.xml", FileMode.Open);
                 XmlDictionaryReader reader =
                     XmlDictionaryReader.CreateTextReader(fs, new XmlDictionaryReaderQuotas());
-                DataContractSerializer ser = new DataContractSerializer(typeof(List<Buyer>));
+                DataContractSerializer serStore = new DataContractSerializer(typeof(List<GroceryStore>));
 
-                // Deserialize the data and read it from the instance.
-                BuyerList =
-                    (List<Buyer>)ser.ReadObject(reader, true);
+                Store = (List<GroceryStore>)serStore.ReadObject(reader, true);
                 reader.Close();
                 fs.Close();
-                for (int i = 0; i < BuyerList.Count; i++)
-                    if (BuyerList[i].GetChartID() == buyer.GetChartID() && BuyerList[i].GetUserName() == buyer.GetUserName())
+                for (int i = 0; i < Store.Count; i++)
+                    if (Store[i].UserName == creator.GetUserName() && Store[i].GetName() == store.GetName())
                     {
-                        BuyerList.RemoveAt(i);
-                        BuyerList.Insert(i,buyer);
-                        SerializeBuyer();
+                        Store.RemoveAt(i);
+                        Store.Insert(i, store);
+                        SerializeStore();
                         break;
                     }
             }
             else
             {
-                BuyerList.Add(buyer);
-                SerializeBuyer();
+                Store.Add(store);
+                SerializeStore();
             }
         }
         public static void SerializeStore()
@@ -247,7 +212,7 @@ namespace Manager
             FileStream writer = new FileStream("store.xml", FileMode.OpenOrCreate);
             DataContractSerializer ser =
                 new DataContractSerializer(typeof(List<GroceryStore>));
-            ser.WriteObject(writer, GroceryStoreList);
+            ser.WriteObject(writer, Store);
             writer.Close();
         }
         public static void SerializeUser()
@@ -256,14 +221,6 @@ namespace Manager
             DataContractSerializer ser =
                 new DataContractSerializer(typeof(List<User>));
             ser.WriteObject(writer, Users);
-            writer.Close();
-        }
-        public static void SerializeBuyer()
-        {
-            FileStream writer = new FileStream("buyer.xml", FileMode.Create);
-            DataContractSerializer ser =
-                new DataContractSerializer(typeof(List<Buyer>));
-            ser.WriteObject(writer, BuyerList);
             writer.Close();
         }
     }
