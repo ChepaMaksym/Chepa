@@ -10,14 +10,14 @@ using System.Runtime.Serialization;
 namespace Manager
 {
     [DataContract, KnownType(typeof(User))]
-    public class Admin: User
+    public class Admin : User
     {
         public Admin(string userName, long chartID) : base(userName, chartID)
         {
             SetRights(Rights.Admin);
         }
 
-        public delegate Task MessageLoadedCallback(ITelegramBotClient botClient, Message message);
+        public delegate Task MessageLoadedCallback(ITelegramBotClient botClient, Message message, User user);
         public MessageLoadedCallback CatalogHandler { get; set; }
         public MessageLoadedCallback MessageHandler { get; set; }
         public async Task HandleAdmin(ITelegramBotClient botClient, Message message)
@@ -25,7 +25,7 @@ namespace Manager
             if (message.Text == ConstKeyword.SET_CATALOG)
             {
                 isSetBuyItem = true;
-                await CatalogHandler(botClient, message);
+                await CatalogHandler(botClient, message, this);
                 return;
             }
             else if (message.Text == ConstKeyword.END_INSTALLATION)
@@ -41,7 +41,7 @@ namespace Manager
                 if (FileXML.GetStoreWithNull(message.Chat.Username) == null)
                     await botClient.SendTextMessageAsync(message.Chat.Id, "You don't have bot");
                 else
-                    await CatalogHandler(botClient, message);
+                    await CatalogHandler(botClient, message, this);
                 return;
             }
             else if (message.Text == ConstKeyword.PERSON_STORE)
@@ -60,7 +60,7 @@ namespace Manager
 
             }
             else
-                await MessageHandler(botClient, message);
+                await MessageHandler(botClient, message, this);
         }
         public async Task HandleBuyItem(ITelegramBotClient botClient, Message message, int indexStore)
         {
