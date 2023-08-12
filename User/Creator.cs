@@ -21,7 +21,8 @@ namespace Manager
                 GroceryStore groceryStore = new GroceryStore(message.Chat.Username);
                 string nameStore = message.Text[6..];
                 groceryStore.AddName(nameStore);
-                FileXML.GroceryStoreList.Add(groceryStore);
+               
+                FileXML.Store.Add(groceryStore);
                 FileXML.SerializeStore();
                 await botClient.SendTextMessageAsync(message.Chat.Id, "Enter the description of the store with this context");
                 await botClient.SendTextMessageAsync(message.Chat.Id, "description: ...");
@@ -43,7 +44,7 @@ namespace Manager
                 {ConstKeyword.PERSON_STORE} {ConstKeyword.GET_CATALOG} {ConstKeyword.SET_CATALOG}");
                 User user = FileXML.GetUserWithNull(message.Chat.Username, message.Chat.Id);
                 Admin admin = new Admin(user.GetUserName(), user.GetChartID());
-                FileXML.GroceryStoreList.Add(groceryStore);
+                FileXML.Store.Add(groceryStore);
                 FileXML.SerializeStore();
                 FileXML.SetUser(admin);
                 return;
