@@ -34,10 +34,10 @@ namespace Chepa.Bot
                 switch (myRights)
                 {
                     case Rights.Watcher:
-                        await HandleMessage(botClient, update.Message);
+                        await HandleMessage(botClient, update.Message, user);
                         return;
                     case Rights.Buyer:
-                        await HandleBuyer(botClient, update.Message);
+                        await HandleBuyer(botClient, update.Message, user);
                         return;
                     case Rights.CreatorBot:
                         {
@@ -65,59 +65,44 @@ namespace Chepa.Bot
                 await HandleCallbackQuery(botClient, update.CallbackQuery);
             return;
         }
-        public async Task HandleNewBuyer(ITelegramBotClient botClient, Message message)
-        {
-            FileXML.SetBuyer(new Buyer(message.Chat.Username, message.Chat.Id));
-            await HandleCatalog(botClient, message);
-        }
-        public async Task HandleBuyer(ITelegramBotClient botClient, Message message)
+        public async Task HandleBuyer(ITelegramBotClient botClient, Message message, User user)
         {
             if (FileXML.DeserializeStore() != null)
             {
                 if (FileXML.IsStore(message.Text[1..]))//without '/' set index store
                 {
-                    Buyer buyer = FileXML.GetBuyerWithNull(message.Chat.Username, message.Chat.Id);
-                    if (buyer != null)
-                    {
-                        await SetStoreForBuyer(botClient, message);
-                        if (buyer.GetIndexStore() != -1)
-                            await HandleGoods(botClient, message, FileXML.GetStore(buyer.GetIndexStore()));
-                    }
-                    else
-                        await HandleNewBuyer(botClient, message);
+                    Buyer buyer = new Buyer(user.GetUserName(), user.GetChartID());
+                    await SetStoreForBuyer(botClient, message, buyer);
+                    if (buyer.GetIndexStore() != -1)
+                        await HandleGoods(botClient, message, FileXML.GetStore(buyer.GetIndexStore()));
                 }
                 else if (message.Text == ConstKeyword.ORDER)
                 {
-                    Buyer buyer = FileXML.GetBuyerWithNull(message.Chat.Username, message.Chat.Id);
-                    if (buyer == null)
-                        await HandleNewBuyer(botClient, message);
-                    else
+                    Buyer buyer = (Buyer)FileXML.GetUserWithNull(message.Chat.Username, message.Chat.Id);
+                    string[] textItems = buyer.GetChoose();
+                    if (textItems != null)
                     {
-                        string[] textItems = buyer.GetChoose();
-                        if (textItems != null)
-                        {
-                            //make func
-                            await botClient.SendTextMessageAsync(message.Chat.Id, $"Your check: {buyer.GetCheck()} and items:");
-                            foreach (var item in textItems)
-                                await botClient.SendTextMessageAsync(message.Chat.Id, $"{item}");
-                            buyer.RemoveBuyIteam();
-                            FileXML.SetBuyer(buyer);
-                        }
-                        else
-                            await botClient.SendTextMessageAsync(message.Chat.Id, $"You don't choose goods");
+                        //make func
+                        await botClient.SendTextMessageAsync(message.Chat.Id, $"Your check: {buyer.GetCheck()} and items:");
+                        foreach (var item in textItems)
+                            await botClient.SendTextMessageAsync(message.Chat.Id, $"{item}");
+                        buyer.RemoveBuyIteam();
+                        FileXML.SetUser(buyer);
                     }
+                    else
+                        await botClient.SendTextMessageAsync(message.Chat.Id, $"You don't choose goods");
                 }
                 else if (message.Text == ConstKeyword.START)
                 {
-                    User user = new User(message.Chat.Username, message.Chat.Id);
+                    user = new User(message.Chat.Username, message.Chat.Id);
                     FileXML.SetUser(user);
-                    await HandleMessage(botClient, message);
+                    await HandleMessage(botClient, message, user);
                 }
             }
             else
             {
                 await botClient.SendTextMessageAsync(message.Chat.Id, $"Sorry we don't have store");
-                await HandleMessage(botClient, message);
+                await HandleMessage(botClient, message,user);
             }
             return;
         }
@@ -140,7 +125,7 @@ namespace Chepa.Bot
                 await botClient.SendTextMessageAsync(message.Chat.Id, "We don't have store");
             return;
         }
-        public async Task SetStoreForBuyer(ITelegramBotClient botClient, Message message)
+        public async Task SetStoreForBuyer(ITelegramBotClient botClient, Message message, Buyer buyer)
         {
             bool isComandStore = false;
             int indexStore = -1;
@@ -150,14 +135,14 @@ namespace Chepa.Bot
                 {
                     isComandStore = true;
                     indexStore = i;
+                    break;
                 }
 
             if (isComandStore)
             {
-                Buyer buyer = FileXML.GetBuyerWithNull(message.Chat.Username, message.Chat.Id);
                 buyer.SetIndexStore(indexStore);
                 buyer.SetStore(catalogStore[indexStore]);
-                FileXML.SetBuyer(buyer);
+                FileXML.SetUser(buyer);
                 await botClient.SendTextMessageAsync(message.Chat.Id, "Make" + ConstKeyword.ORDER);
             }
             else
@@ -168,12 +153,11 @@ namespace Chepa.Bot
             return;
         }
         //here
-        public async Task HandleCatalog(ITelegramBotClient botClient, Message message)
+        public async Task HandleCatalog(ITelegramBotClient botClient, Message message, User user)
         {
-            User user = FileXML.GetUserWithNull(message.Chat.Username, message.Chat.Id);
             if (user != null && user.GetRights() == Rights.Buyer)
             {
-                await SetStoreForBuyer(botClient, message);
+                await SetStoreForBuyer(botClient, message, (Buyer)user);
                 if (user.GetIndexStore() != -1)
                     await HandleGoods(botClient, message, FileXML.GetStore(user.GetIndexStore()));
             }
@@ -240,7 +224,7 @@ namespace Chepa.Bot
 
         }
 
-        public async Task HandleMessage(ITelegramBotClient botClient, Message message)
+        public async Task HandleMessage(ITelegramBotClient botClient, Message message, User user)
         {
             switch (message.Text)
             {
@@ -277,13 +261,11 @@ namespace Chepa.Bot
                     }
                 case ConstKeyword.PERSON_RIGHTS:
                     {
-                        User user = FileXML.GetUserWithNull(message.Chat.Username, message.Chat.Id);
                         await botClient.SendTextMessageAsync(message.Chat.Id, $"You are {user.GetRights()}");
                         return;
                     }
                 case ConstKeyword.BUYER:
                     {
-                        User user = FileXML.GetUserWithNull(message.Chat.Username, message.Chat.Id);
                         Buyer buyer = new Buyer(user.GetUserName(), user.GetChartID());
                         FileXML.SetUser(buyer);
                         await botClient.SendTextMessageAsync(message.Chat.Id, $"You are {buyer.GetRights()}");
@@ -294,8 +276,6 @@ namespace Chepa.Bot
                     {
                         if (FileXML.GetStoreWithNull(message.Chat.Username) != null)
                         {
-
-                            User user = FileXML.GetUserWithNull(message.Chat.Username, message.Chat.Id);
                             Admin admin = new Admin(user.GetUserName(), user.GetChartID());
                             FileXML.SetUser(admin);
                             admin.CatalogHandler = HandleCatalog;
@@ -329,7 +309,7 @@ namespace Chepa.Bot
             }
             else if (callbackQuery.Data.StartsWith(ConstKeyword.CALLBACK_GOODS))
             {
-                if (FileXML.GetBuyerWithNull(callbackQuery.Message.Chat.Username, callbackQuery.Message.Chat.Id) != null)
+                if (FileXML.GetUserWithNull(callbackQuery.Message.Chat.Username, callbackQuery.Message.Chat.Id) != null)
                     await HandleChooseBuyer(botClient, callbackQuery);
             }
             else if (callbackQuery.Data.StartsWith(ConstKeyword.CALLBACK_STORE_CATALOG))
@@ -355,21 +335,32 @@ namespace Chepa.Bot
                     await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"We don't have this store");
                 return;
             }
-            await botClient.SendTextMessageAsync(
-                callbackQuery.Message.Chat.Id,
-                $"You choose with data: {callbackQuery.Data}"
-                );
-            return;
+            else
+            {
+                await botClient.SendTextMessageAsync(
+                    callbackQuery.Message.Chat.Id,
+                    $"You choose with data: {callbackQuery.Data}"
+                    );
+                return;
+            }
         }
         public async Task HandleChooseBuyer(ITelegramBotClient botClient, CallbackQuery callbackQuery)
         {
             if (callbackQuery.Data.StartsWith(ConstKeyword.CALLBACK_GOODS))
             {
+                User user = FileXML.GetUserWithNull(callbackQuery.Message.Chat.Username, callbackQuery.Message.Chat.Id);
                 string[] goods = callbackQuery.Data.ToString().Split(' ');
-                Buyer buyer = FileXML.GetBuyerWithNull(callbackQuery.Message.Chat.Username, callbackQuery.Message.Chat.Id);
-                buyer.ChooseIteams(new Goods(goods[1], Convert.ToInt32(goods[2])));
-                FileXML.SetBuyer(buyer);
-                await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"You choose: {goods[1]}");
+                if (user is Buyer)
+                {
+                    Buyer buyer = (Buyer)user;
+                    buyer.ChooseIteams(new Goods(goods[1], Convert.ToInt32(goods[2])));
+                    FileXML.SetUser(buyer);
+                    await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"You choose: {goods[1]}");
+                }
+                else if (user is Admin)
+                {
+                    await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"Admin choose: {goods[1]}");
+                }
             }
 
         }
