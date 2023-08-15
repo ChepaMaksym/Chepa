@@ -27,7 +27,7 @@ namespace Manager
         [DataMember]
         private int indexStore = -1;
         [DataMember]
-        public bool isSetBuyItem { get; set; }
+        public bool IsSetBuyItem { get; set; }
 
         public User(string userName, long chartID)
         {

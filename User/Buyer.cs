@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Runtime.Serialization;
-using Store;
+using Warehouse;
 
 namespace Manager
 {
@@ -17,9 +17,9 @@ namespace Manager
         {
             store.BuyIteam(goods, amount);
         }
-        public void SetStore(GroceryStore groceryStore)
+        public void SetStore(Store groceryStore)
         {
-            store = groceryStore;
+            store = (GroceryStore)groceryStore;//issue for further
         }
         public GroceryStore GetStore()
         {

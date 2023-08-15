@@ -3,23 +3,23 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Xml;
-using Store;
+using Warehouse;
 using Manager;
 namespace Manager
 {
     public static class FileXML
     {
         [DataMember()]
-        public static List<GroceryStore> Store { get; set; } = new List<GroceryStore>();
+        public static List<Store> Store { get; set; } = new List<Store>();
         [DataMember()]
         public static List<User> Users { get; set; } = new List<User>();
 
-        public static List<GroceryStore> GetStoreWithNull(string userName)
+        public static List<Store> GetStoreWithNull(string userName)
         {
             Store = DeserializeStore();
             if (Store != null)
             {
-                List<GroceryStore> result = new List<GroceryStore>();
+                List<Store> result = new List<Store>();
                 foreach (var item in Store)
                     if (item.UserName == userName)
                         result.Add(item);
@@ -28,26 +28,34 @@ namespace Manager
             }
             return null;
         }
+        public static Store GetStoreWithNull(string userName, int index)
+        {
+            Store = DeserializeStore();
+            if (Store != null)
+                if(Store[index].UserName == userName)
+                    return Store[index];
+            return null;
+        }
         public static bool IsStore(string store)
         {
-            List<GroceryStore> temp = DeserializeStore();
+            List<Store> temp = DeserializeStore();
             if (temp != null)
             {
                 foreach (var item in temp)
-                    if (item.GetName() == store)
+                    if (item.Name == store)
                         return true;
             }
             return false;
         }
-        public static GroceryStore GetCreatedStore(string userName)
+        public static Store GetCreatedStore(string userName)
         {
-            List<GroceryStore> temp = DeserializeStore();
+            List<Store> temp = DeserializeStore();
             if (temp != null)
             {
                 Store = temp;
-                GroceryStore result = null;
+                Store result = null;
                 for (int i = 0; i < Store.Count; i++)
-                    if (Store[i].UserName == userName && Store[i].GetDescription() == null)
+                    if (Store[i].UserName == userName && Store[i].Description == null)
                     {
                         result = Store[i];
                         Store.RemoveAt(i);
@@ -60,12 +68,12 @@ namespace Manager
         }
         public static void AddCatalogStore(string userName, GroceryStore groceryStore)
         {
-            List<GroceryStore> temp = DeserializeStore();
+            List<Store> temp = DeserializeStore();
             if (temp != null)
             {
                 Store = temp;
                 for (int i = 0; i < Store.Count; i++)
-                    if (Store[i].UserName == userName && Store[i].GetName() == groceryStore.GetName())
+                    if (Store[i].UserName == userName && Store[i].Name == groceryStore.Name)
                     {
                         Store.RemoveAt(i);
                         Store.Insert(i, groceryStore);
@@ -74,23 +82,23 @@ namespace Manager
                     }
             }
         }
-        public static GroceryStore GetStore(int index)
+        public static Store GetStore(int index)
         {
             return DeserializeStore()[index];
         }
 
-        public static List<GroceryStore> DeserializeStore()
+        public static List<Store> DeserializeStore()
         {
             if (File.Exists("store.xml"))
             {
                 FileStream fs = new FileStream("store.xml", FileMode.Open);
                 XmlDictionaryReader reader =
                     XmlDictionaryReader.CreateTextReader(fs, new XmlDictionaryReaderQuotas());
-                DataContractSerializer ser = new DataContractSerializer(typeof(List<GroceryStore>));
+                DataContractSerializer ser = new DataContractSerializer(typeof(List<Store>));
 
                 // Deserialize the data and read it from the instance.
-                List<GroceryStore> deserializedStore =
-                    (List<GroceryStore>)ser.ReadObject(reader, true);
+                List<Store> deserializedStore =
+                    (List<Store>)ser.ReadObject(reader, true);
                 reader.Close();
                 fs.Close();
                 return deserializedStore;
@@ -180,7 +188,7 @@ namespace Manager
                 SerializeUser();
             }
         }
-        public static void SetStore(GroceryStore store, Creator creator)
+        public static void SetStore(Store store, Creator creator)
         {
             if (File.Exists("store.xml"))
             {
@@ -189,11 +197,11 @@ namespace Manager
                     XmlDictionaryReader.CreateTextReader(fs, new XmlDictionaryReaderQuotas());
                 DataContractSerializer serStore = new DataContractSerializer(typeof(List<GroceryStore>));
 
-                Store = (List<GroceryStore>)serStore.ReadObject(reader, true);
+                Store = (List<Store>)serStore.ReadObject(reader, true);
                 reader.Close();
                 fs.Close();
                 for (int i = 0; i < Store.Count; i++)
-                    if (Store[i].UserName == creator.GetUserName() && Store[i].GetName() == store.GetName())
+                    if (Store[i].UserName == creator.GetUserName() && Store[i].Name == store.Name)
                     {
                         Store.RemoveAt(i);
                         Store.Insert(i, store);
@@ -211,7 +219,7 @@ namespace Manager
         {
             FileStream writer = new FileStream("store.xml", FileMode.OpenOrCreate);
             DataContractSerializer ser =
-                new DataContractSerializer(typeof(List<GroceryStore>));
+                new DataContractSerializer(typeof(List<Store>));
             ser.WriteObject(writer, Store);
             writer.Close();
         }

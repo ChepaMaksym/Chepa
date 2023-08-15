@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using Store;
+using Warehouse;
 using Key;
 using System.Runtime.Serialization;
 
@@ -24,17 +24,17 @@ namespace Manager
         {
             if (message.Text == ConstKeyword.SET_CATALOG)
             {
-                isSetBuyItem = true;
+                IsSetBuyItem = true;
                 await CatalogHandler(botClient, message, this);
                 return;
             }
             else if (message.Text == ConstKeyword.END_INSTALLATION)
             {
-                isSetBuyItem = false;
+                IsSetBuyItem = false;
                 SetIndexStore(-1);
                 FileXML.SetUser(this);
             }
-            else if (isSetBuyItem)
+            else if (IsSetBuyItem)
                 await HandleBuyItem(botClient, message, FileXML.GetUserWithNull(message.Chat.Username, message.Chat.Id).GetIndexStore());
             else if (message.Text == ConstKeyword.GET_CATALOG)
             {
@@ -46,7 +46,7 @@ namespace Manager
             }
             else if (message.Text == ConstKeyword.PERSON_STORE)
             {
-                List<GroceryStore> catalogGroceryStore = FileXML.GetStoreWithNull(message.Chat.Username);
+                List<Store> catalogGroceryStore = FileXML.GetStoreWithNull(message.Chat.Username);
                 if (catalogGroceryStore != null)
                 {
                     await botClient.SendTextMessageAsync(message.Chat.Id, "Your bot:");
@@ -69,9 +69,9 @@ namespace Manager
                 string[] goods = message.Text[7..].Split(' ');
                 if (goods.Length == 2)
                 {
-                    List<GroceryStore> groceryStore = FileXML.GetStoreWithNull(message.Chat.Username);
-                    groceryStore[indexStore].SetGoods(new Goods(goods[0], Convert.ToInt32(goods[1])));
-                    FileXML.AddCatalogStore(message.Chat.Username, groceryStore[indexStore]);
+                    GroceryStore groceryStore = (GroceryStore)FileXML.GetStoreWithNull(message.Chat.Username,indexStore);
+                    groceryStore.SetGoods(new Goods(goods[0], Convert.ToInt32(goods[1])));
+                    FileXML.AddCatalogStore(message.Chat.Username, groceryStore);
                 }
                 else
                 {

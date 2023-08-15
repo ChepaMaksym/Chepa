@@ -1,4 +1,4 @@
-﻿using Store;
+﻿using Warehouse;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -20,7 +20,7 @@ namespace Manager
             {
                 GroceryStore groceryStore = new GroceryStore(message.Chat.Username);
                 string nameStore = message.Text[6..];
-                groceryStore.AddName(nameStore);
+                groceryStore.Name = nameStore;
                
                 FileXML.Store.Add(groceryStore);
                 FileXML.SerializeStore();
@@ -31,13 +31,13 @@ namespace Manager
             else if (message.Text.StartsWith(ConstKeyword.BEGINNING_DESCRIPTION_STORE))
             {
                 string description = message.Text[13..];
-                GroceryStore groceryStore = FileXML.GetCreatedStore(message.Chat.Username);
+                Store groceryStore = FileXML.GetCreatedStore(message.Chat.Username);
                 if (groceryStore == null)
                 {
                     await botClient.SendTextMessageAsync(message.Chat.Id, "We don't have your bot. Pls create the bot.");
                     return;
                 }
-                groceryStore.SetDesctiption(description);
+                groceryStore.Description = description;
                 await botClient.SendTextMessageAsync(message.Chat.Id, "Succeed!");
                 await botClient.SendTextMessageAsync(message.Chat.Id,
                 @$"You have a new comand for your store:

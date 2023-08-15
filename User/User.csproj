@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Key\Key.csproj" />
-    <ProjectReference Include="..\Strore\Strore.csproj" />
+    <ProjectReference Include="..\Warehouse\Warehouse.csproj" />
   </ItemGroup>
 
 </Project>
