@@ -5,11 +5,11 @@ VisualStudioVersion = 16.0.32228.343
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chepa.Bot", "Chepa.Bot.csproj", "{91191C6C-A56A-4CE1-BF26-59DD9C1FC97C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strore", "..\Strore\Strore.csproj", "{495716B0-2970-4B17-8F53-1A8AF7617C7C}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "User", "..\User\User.csproj", "{2D5EB29D-E8DF-49D8-A3C8-F51264878E33}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Key", "..\Key\Key.csproj", "{96360586-D785-41A0-887E-D7D76518971A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Key", "..\Key\Key.csproj", "{96360586-D785-41A0-887E-D7D76518971A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Warehouse", "..\Warehouse\Warehouse.csproj", "{083540C1-2653-4C60-B818-C41D4E4ED689}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,10 +21,6 @@ Global
 		{91191C6C-A56A-4CE1-BF26-59DD9C1FC97C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{91191C6C-A56A-4CE1-BF26-59DD9C1FC97C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{91191C6C-A56A-4CE1-BF26-59DD9C1FC97C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{495716B0-2970-4B17-8F53-1A8AF7617C7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{495716B0-2970-4B17-8F53-1A8AF7617C7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{495716B0-2970-4B17-8F53-1A8AF7617C7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{495716B0-2970-4B17-8F53-1A8AF7617C7C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2D5EB29D-E8DF-49D8-A3C8-F51264878E33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2D5EB29D-E8DF-49D8-A3C8-F51264878E33}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2D5EB29D-E8DF-49D8-A3C8-F51264878E33}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -33,6 +29,10 @@ Global
 		{96360586-D785-41A0-887E-D7D76518971A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{96360586-D785-41A0-887E-D7D76518971A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{96360586-D785-41A0-887E-D7D76518971A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{083540C1-2653-4C60-B818-C41D4E4ED689}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{083540C1-2653-4C60-B818-C41D4E4ED689}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{083540C1-2653-4C60-B818-C41D4E4ED689}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{083540C1-2653-4C60-B818-C41D4E4ED689}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
