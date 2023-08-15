@@ -4,7 +4,7 @@ using System.Text;
 using System.Linq;
 using System.Runtime.Serialization;
 
-namespace Store
+namespace Warehouse
 {
     [DataContract]
     public class Group
@@ -14,7 +14,10 @@ namespace Store
         public Group()
         {
         }
-
+        public Group(List<Goods> goods)
+        {
+            this.goods = goods;
+        }
         public void AddGoods(Goods currentGoods)
         {
             if (goods == null)

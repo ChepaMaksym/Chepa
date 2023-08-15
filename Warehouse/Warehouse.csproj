@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-    <RootNamespace>Strore</RootNamespace>
+    <RootNamespace>Warehouse</RootNamespace>
   </PropertyGroup>
 
 </Project>
