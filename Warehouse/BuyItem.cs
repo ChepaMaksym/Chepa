@@ -1,29 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.Runtime.Serialization;
-using System.Text;
 
 namespace Warehouse
 {
     [DataContract]
-    class BuyItem
+    public class BuyItem
     {
         [DataMember()]
-        private readonly Goods goods;
+        private Product product = new Product();
         [DataMember()]
-        private readonly int amount;
-        public BuyItem(Goods goods, int amount = 1)
+        private int amount;
+        public int BuyItemId { get; set; }
+        public int Amount { get => amount; set => amount = value; }
+        public string Name { get => product.Name; set => product.Name = value; }
+        public int Price { get => product.Price; set => product.Price = value; }
+
+        public int CartId { get; set; }
+
+        public Cart Cart { get; set; }
+
+        public BuyItem()
         {
-            this.goods = new Goods(goods);
+
+        }
+        public BuyItem(Product product, int amount = 1)
+        {
+            this.product = product;
             this.amount = amount;
         }
         public int GetPrice()
         {
-            return goods.GetPrice() * amount;
+            return product.Price * amount;
         }
-        public Goods GetGoods()
+        public Product GetGoods()
         {
-            return goods;
+            return product;
+        }
+        public override string ToString()
+        {
+            return $"Id: {product.ProductId} name: {product.Name} price: {product.Price} amount: {amount}";
         }
     }
 }
