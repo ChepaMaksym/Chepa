@@ -24,7 +24,8 @@
 
         public const string CALLBACK_STORE_CREATE = "Grocery Store";
         public const string CALLBACK_GOODS = "goods";
-        public const string CALLBACK_STORE_CATALOG = "store";
+        public const string CALLBACK_STORE_SET_CATALOG = "setStore";
+        public const string CALLBACK_STORE_GET_CATALOG = "getStore";
 
 
 

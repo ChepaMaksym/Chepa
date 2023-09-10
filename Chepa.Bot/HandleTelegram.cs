@@ -9,18 +9,21 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using Warehouse;
-using Manager;
-using User = Manager.User;
+using Warehouse.Manager;
+using User = Warehouse.Manager.User;
 using Key;
+using Chepa.Bot.Db;
+using System.Linq;
 namespace Chepa.Bot
 {
     class HandleTelegram
     {
+        ChepaBotContext context = new ChepaBotContext();
         public async Task HandleUpdatesAsync(ITelegramBotClient botClient, Update update, CancellationToken token)
         {
             if (update.Type == UpdateType.Message && update?.Message?.Text != null)
             {
-                User user = FileXML.GetUserWithNull(update.Message.Chat.Username, update.Message.Chat.Id);//make with derived class unboxing
+                User user = context.Users.FirstOrDefault(u => u.UserName == update.Message.Chat.Username);//make with derived class unboxing
                 if (user == null)
                 {
                     if (update.Message.Chat.Username == null)
@@ -29,9 +32,10 @@ namespace Chepa.Bot
                         return;
                     }
                     user = new User(update.Message.Chat.Username, update.Message.Chat.Id);
-                    FileXML.SetUser(user);
+                    context.Users.Add(user);
+                    context.SaveChanges();
                 }
-                Rights myRights = user.GetRights();
+                Rights myRights = user.Rights;
                 Console.WriteLine(
                 $"{update.Message.Chat.Username}  |  {update.Message.Chat.FirstName}  |  {update.Message.Chat.LastName}  |  {update.Message.Date}.");
                 switch (myRights)
@@ -44,15 +48,27 @@ namespace Chepa.Bot
                         return;
                     case Rights.CreatorBot:
                         {
-                            Creator creator = (Creator)user;
+                            Creator creator = new Creator(user.UserName, user.ChatId, user.UserId);
+                            StoresRepository storesRepository = new StoresRepository(context);
+                            UserRepository userRepository = new UserRepository(context);
+                            creator.StoreAddedEvent = storesRepository.Add;
+                            creator.StoreUpdatedEvent = storesRepository.Update;
+                            creator.CreatedStoreGetedEvent = storesRepository.GetCreatedStore;
+                            creator.UsereUpdatedEvent = userRepository.Update;
                             await creator.HandleCreatorBot(botClient, update.Message);
                             return;
                         }
                     case Rights.Admin:
                         {
-                            Admin admin = (Admin)user;
-                            admin.CatalogHandler = HandleCatalog;
-                            admin.MessageHandler = HandleMessage;
+                            Admin admin = new Admin(user);
+                            StoresRepository storesRepository = new StoresRepository(context);
+                            UserRepository userRepository = new UserRepository(context);
+                            admin.CatalogHandleEvent = HandleCatalog;
+                            admin.MessageHandleEvent = HandleMessage;
+                            admin.StoreAddedEvent = storesRepository.Add;
+                            admin.OwnerStoresGetedEvent = storesRepository.GetOwnersStores;
+                            admin.StoreUpdatedEvent = storesRepository.Update;
+                            admin.UsereUpdatedEvent = userRepository.Update;
                             await admin.HandleAdmin(botClient, update.Message);
                             return;
                         }
@@ -66,63 +82,63 @@ namespace Chepa.Bot
             }
             else if (update.Type == UpdateType.CallbackQuery)
             {
-                User user = FileXML.GetUserWithNull(update.CallbackQuery.Message.Chat.Username, update.CallbackQuery.Message.Chat.Id);
+                //include null
+                User user = context.Users.FirstOrDefault(u => u.UserName == update.CallbackQuery.From.Username);//FileXML.GetUserWithNull(update.CallbackQuery.Message.Chat.Username, update.CallbackQuery.Message.Chat.Id);
                 await HandleCallbackQuery(botClient, update.CallbackQuery, user);
             }
             return;
         }
         public async Task HandleBuyer(ITelegramBotClient botClient, Message message, User user)
         {
-            if (FileXML.DeserializeStore() != null)
+            StoresRepository storesRepository = new StoresRepository(context);
+            UserRepository userRepository = new UserRepository(context);
+            if (storesRepository.IsStore(message.Text[1..]))//without '/' 
             {
-                if (FileXML.IsStore(message.Text[1..]))//without '/' set index store
+                await SetStoreId(botClient, message, user);
+                userRepository.Update(user);
+                if (user.StoreId != null)//cheak
+                    await HandleGoods(botClient, user.ChatId, (GroceryStore)storesRepository.GetStore(user.StoreId));//make
+            }
+            else if (message.Text == ConstKeyword.ORDER)
+            {
+                Buyer buyer = new Buyer(user);
+                buyer.Store = storesRepository.GetStoreForBuyer((int)buyer.StoreId);
+                List<string> textItems = buyer.GetChoose();
+                if (textItems.Count != 0)
                 {
-                    Buyer buyer = new Buyer(user.GetUserName(), user.GetChartID());
-                    await SetStore(botClient, message, buyer);
-                    if (buyer.GetIndexStore() != -1)
-                        await HandleGoods(botClient, message, (GroceryStore)FileXML.GetStore(buyer.GetIndexStore()));
+                    //make func
+                    await botClient.SendTextMessageAsync(message.Chat.Id, $"Your check: {buyer.GetCheck()} and items:");
+                    foreach (var item in textItems)
+                        await botClient.SendTextMessageAsync(message.Chat.Id, $"{item}");
+                    buyer.RemoveBuyIteam(buyer.Store.Carts.FirstOrDefault(c => c.UserId == buyer.UserId).CartId);
+                    storesRepository.Update(buyer.Store);
+
+
                 }
-                else if (message.Text == ConstKeyword.ORDER)
-                {
-                    Buyer buyer = (Buyer)FileXML.GetUserWithNull(message.Chat.Username, message.Chat.Id);
-                    string[] textItems = buyer.GetChoose();
-                    if (textItems != null)
-                    {
-                        //make func
-                        await botClient.SendTextMessageAsync(message.Chat.Id, $"Your check: {buyer.GetCheck()} and items:");
-                        foreach (var item in textItems)
-                            await botClient.SendTextMessageAsync(message.Chat.Id, $"{item}");
-                        buyer.RemoveBuyIteam();
-                        FileXML.SetUser(buyer);
-                    }
-                    else
-                        await botClient.SendTextMessageAsync(message.Chat.Id, $"You don't choose goods");
-                }
-                else if (message.Text == ConstKeyword.START)
-                {
-                    user = new User(message.Chat.Username, message.Chat.Id);
-                    FileXML.SetUser(user);
-                    await HandleMessage(botClient, message, user);
-                }
+                else
+                    await botClient.SendTextMessageAsync(message.Chat.Id, $"You don't choose goods");
+            }
+            else if (message.Text == ConstKeyword.START)
+            {
+                user = new User(message.Chat.Username, message.Chat.Id);
+                userRepository.Update(user);
+                await HandleMessage(botClient, message, user);
             }
             else
-            {
-                await botClient.SendTextMessageAsync(message.Chat.Id, $"Sorry we don't have store");
-                await HandleMessage(botClient, message,user);
-            }
+                await HandleMessage(botClient, message, user);
             return;
         }
         public async Task HandleStore(ITelegramBotClient botClient, Message message)
         {
-            if (FileXML.DeserializeStore() != null)
+            if (context.Store.Count() != 0)//check
             {
                 await botClient.SendTextMessageAsync(message.Chat.Id, "Choose store for visit");
-                List<Store> catalogGroceryStore = FileXML.DeserializeStore();
                 StringBuilder items = new StringBuilder();
-                for (int i = 0; i < catalogGroceryStore.Count; i++)
+                StoresRepository storesRepository = new StoresRepository(context);
+                foreach (var item in storesRepository.GetAll())
                 {
                     items.Append(ConstKeyword.SLACH);
-                    items.Append(catalogGroceryStore[i].Name);
+                    items.Append(item.Name);
                     items.Append('\n');
                 }
                 await botClient.SendTextMessageAsync(message.Chat.Id, $"{items}");
@@ -131,26 +147,17 @@ namespace Chepa.Bot
                 await botClient.SendTextMessageAsync(message.Chat.Id, "We don't have store");
             return;
         }
-        public async Task SetStore(ITelegramBotClient botClient, Message message, Buyer buyer)
+        public async Task SetStoreId(ITelegramBotClient botClient, Message message, User user)
         {
-            bool isComandStore = false;
-            int indexStore = -1;
-            List<Store> catalogStore = FileXML.DeserializeStore();
-            for (int i = 0; i < catalogStore.Count; i++)
-                if (message.Text == $"{ConstKeyword.SLACH}{catalogStore[i].Name}")
+            StoresRepository storesRepository = new StoresRepository(context);
+            foreach (var item in storesRepository.GetAll())
+                if (message.Text == $"{ConstKeyword.SLACH}{item.Name}")
                 {
-                    isComandStore = true;
-                    indexStore = i;
+                    user.StoreId = item.StoreId;
                     break;
                 }
-
-            if (isComandStore)
-            {
-                buyer.SetIndexStore(indexStore);
-                buyer.SetStore(catalogStore[indexStore]);
-                FileXML.SetUser(buyer);
+            if (user.StoreId != null)
                 await botClient.SendTextMessageAsync(message.Chat.Id, "Make " + ConstKeyword.ORDER);
-            }
             else
             {
                 await botClient.SendTextMessageAsync(message.Chat.Id, "Pls click on the store name");
@@ -161,45 +168,51 @@ namespace Chepa.Bot
 
         public async Task HandleCatalog(ITelegramBotClient botClient, Message message, User user)
         {
-            if (user != null && user.GetRights() == Rights.Buyer)
+            StoresRepository storesRepository = new StoresRepository(context);
+            if (user != null && user.Rights == Rights.Buyer)
             {
-                await SetStore(botClient, message, (Buyer)user);
-                if (user.GetIndexStore() != -1)
-                    await HandleGoods(botClient, message, (GroceryStore)FileXML.GetStore(user.GetIndexStore()));
+                await SetStoreId(botClient, message, user);
+                if (user.StoreId != null)
+                    await HandleGoods(botClient, user.ChatId, (GroceryStore)user.Store);
             }
             else if (message.Text == ConstKeyword.SET_CATALOG)
             {
-                List<Store> catalogStore = FileXML.GetStoreWithNull(message.Chat.Username);
-                InlineKeyboardButton[] keyboardButton = new InlineKeyboardButton[catalogStore.Count];
-                int count = FileXML.DeserializeStore().Count;
-                for (int i = 0; i < count; i++)
-                    keyboardButton[i] = InlineKeyboardButton.WithCallbackData($"{catalogStore[i].Name}", $"{ConstKeyword.CALLBACK_STORE_CATALOG} {catalogStore[i].Name}");
+                InlineKeyboardButton[] keyboardButton = new InlineKeyboardButton[context.Store.Count()];
+                var stores = storesRepository.GetOwnersStores(user.UserName);
+                for (int i = 0; i < stores.Count; i++)
+                    keyboardButton[i] = InlineKeyboardButton.WithCallbackData($"{stores[i].Name}", $"{ConstKeyword.CALLBACK_STORE_SET_CATALOG} {stores[i].Name}");
                 InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(keyboardButton);
-                await botClient.SendTextMessageAsync(message.Chat.Id, $"Choose your store for adding goods", replyMarkup: keyboard);
+                await botClient.SendTextMessageAsync(message.Chat.Id, $"Choose your store for adding product", replyMarkup: keyboard);
                 Thread.Sleep(1);
             }
-            else
+            else if (message.Text == ConstKeyword.GET_CATALOG)
             {
-                List<Store> catalogStore = FileXML.GetStoreWithNull(message.Chat.Username);
-                for (int i = 0; i < catalogStore.Count; i++)
-                    await HandleGoods(botClient, message, (GroceryStore)catalogStore[i]);
+                InlineKeyboardButton[] keyboardButton = new InlineKeyboardButton[context.Store.Count()];//make func
+                var stores = storesRepository.GetOwnersStores(user.UserName);
+                for (int i = 0; i < stores.Count; i++)
+                    keyboardButton[i] = InlineKeyboardButton.WithCallbackData($"{stores[i].Name}", $"{ConstKeyword.CALLBACK_STORE_GET_CATALOG} {stores[i].Name}");
+                InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(keyboardButton);
+                await botClient.SendTextMessageAsync(message.Chat.Id, $"Choose your store for get products", replyMarkup: keyboard);
             }
             return;
         }
-        public async Task HandleGoods(ITelegramBotClient botClient, Message message, GroceryStore grocery)
+        public async Task HandleGoods(ITelegramBotClient botClient, long chatId, GroceryStore grocery)//make
         {
-            string[] catalog = grocery.GetCatalogInfo();
-            if (catalog != null)
+            if (grocery.Showcases != null)
             {
-                InlineKeyboardButton[] keyboardButton = new InlineKeyboardButton[catalog.Length];
-                for (int i = 0; i < catalog.Length; i++)
-                    keyboardButton[i] = InlineKeyboardButton.WithCallbackData($"{catalog[i]}", $"{ConstKeyword.CALLBACK_GOODS} {catalog[i]}");
-                InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(keyboardButton);
-                await botClient.SendTextMessageAsync(message.Chat.Id, $"Catalog {grocery.Name}", replyMarkup: keyboard);
+                foreach (var showcase in grocery.Showcases)
+                {
+                    InlineKeyboardButton[] keyboardButton = new InlineKeyboardButton[showcase.Products.Count];
+                    string[] product = grocery.GetProducts(showcase.Name);
+                    for (int j = 0; j < product.Length; j++)
+                        keyboardButton[j] = InlineKeyboardButton.WithCallbackData($"{product[j]}", $"{ConstKeyword.CALLBACK_GOODS} {product[j]}");
+                    InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(keyboardButton);
+                    await botClient.SendTextMessageAsync(chatId, $"Catalog {showcase.Name}", replyMarkup: keyboard);
+                }
                 Thread.Sleep(1);
             }
             else
-                await botClient.SendTextMessageAsync(message.Chat.Id, $"The {grocery.Name} doesn't have catalog!");
+                await botClient.SendTextMessageAsync(chatId, $"The {grocery.Name} doesn't have catalog!");
             return;
         }
 
@@ -227,38 +240,46 @@ namespace Chepa.Bot
                     }
                 case ConstKeyword.CATALOG_STORE:
                     {
-                        List<Store> catalogGroceryStore = FileXML.DeserializeStore();
-                        if (catalogGroceryStore == null)
+                        StoresRepository storesRepository = new StoresRepository(context);
+                        if (context.Store.Count() == 0)
                         {
                             await botClient.SendTextMessageAsync(message.Chat.Id, "We don't have store");
                             return;
                         }
                         else
-                            foreach (var a in catalogGroceryStore)
-                                await botClient.SendTextMessageAsync(message.Chat.Id, $"{a}");
+                            foreach (var store in storesRepository.GetAll())
+                                await botClient.SendTextMessageAsync(message.Chat.Id, $"{store}");
                         return;
                     }
                 case ConstKeyword.PERSON_RIGHTS:
                     {
-                        await botClient.SendTextMessageAsync(message.Chat.Id, $"You are {user.GetRights()}");
+                        await botClient.SendTextMessageAsync(message.Chat.Id, $"You are {user.Rights}");
                         return;
                     }
                 case ConstKeyword.BUYER:
                     {
-                        Buyer buyer = new Buyer(user.GetUserName(), user.GetChartID());
-                        FileXML.SetUser(buyer);
-                        await botClient.SendTextMessageAsync(message.Chat.Id, $"You are {buyer.GetRights()}");
+                        Buyer buyer = new Buyer(user);
+                        UserRepository userRepository = new UserRepository(context);
+                        userRepository.Update(buyer);
+                        await botClient.SendTextMessageAsync(message.Chat.Id, $"You are {buyer.Rights}");
                         await HandleStore(botClient, message);
                         return;
                     }
                 case ConstKeyword.PERSON_STORE:
                     {
-                        if (FileXML.GetStoreWithNull(message.Chat.Username) != null)
+                        StoresRepository storesRepository = new StoresRepository(context);
+                        List<Store> catalogStore = storesRepository.GetOwnersStores(user.UserName);
+                        if (catalogStore != null)
                         {
-                            Admin admin = new Admin(user.GetUserName(), user.GetChartID());
-                            FileXML.SetUser(admin);
-                            admin.CatalogHandler = HandleCatalog;
-                            admin.MessageHandler = HandleMessage;
+                            Admin admin = new Admin(user);
+                            UserRepository userRepository = new UserRepository(context);
+                            userRepository.Update(admin);
+                            admin.CatalogHandleEvent = HandleCatalog;
+                            admin.MessageHandleEvent = HandleMessage;
+                            admin.StoreAddedEvent = storesRepository.Add;
+                            admin.OwnerStoresGetedEvent = storesRepository.GetOwnersStores;
+                            admin.StoreUpdatedEvent = storesRepository.Update;
+                            admin.UsereUpdatedEvent = userRepository.Update;
                             await admin.HandleAdmin(botClient, message);
                         }
                         else
@@ -282,38 +303,58 @@ namespace Chepa.Bot
                 await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, "The store is being created");
                 await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, "Enter the name of the store with this context");
                 await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, "name: store");
-                Creator creator = new Creator(user.GetUserName(), user.GetChartID());
-                FileXML.SetUser(creator);
+                Creator creator = new Creator(user.UserName, user.ChatId, user.UserId)
+                {
+                    Rights = Rights.CreatorBot
+                };
+                UserRepository userRepository = new UserRepository(context);
+                userRepository.Update(creator);
                 return;
             }
             else if (callbackQuery.Data.StartsWith(ConstKeyword.CALLBACK_GOODS))
+                await HandleChooseBuyer(botClient, callbackQuery, user);
+            else if (callbackQuery.Data.StartsWith(ConstKeyword.CALLBACK_STORE_SET_CATALOG))
             {
-                await HandleChooseBuyer(botClient, callbackQuery,user);
-            }
-            else if (callbackQuery.Data.StartsWith(ConstKeyword.CALLBACK_STORE_CATALOG))
-            {
-                string[] store = callbackQuery.Data.ToString().Split(' ');
-                List<Store> catalogGroceryStore = FileXML.DeserializeStore();
-                if (user is Admin admin)
+                string[] storeData = callbackQuery.Data.ToString().Split(' ');
+                StoresRepository storesRepository = new StoresRepository(context);
+                UserRepository userRepository = new UserRepository(context);
+                List<Store> catalogStore = storesRepository.GetOwnersStores(user.UserName);
+                string nameStore = null;
+                if (user.Rights == Rights.Admin)
                 {
-                    for (int i = 0; i < catalogGroceryStore.Count; i++)
-                        if (store[1] == catalogGroceryStore[i].Name && admin.GetUserName() == catalogGroceryStore[i].UserName)
+                    for (int i = 0; i < catalogStore.Count; i++)
+                        if (storeData[1] == catalogStore[i].Name)
                         {
-                            admin.IsSetBuyItem = true;
-                            admin.SetIndexStore(i);
+                            nameStore = catalogStore[i].Name;
+                            user.IsSetBuyItem = true;
+                            user.StoreId = catalogStore[i].StoreId;
+                            userRepository.Update(user);
                         }
-                    if (admin.IsSetBuyItem == true)
+                    if (user.IsSetBuyItem == true)
                     {
-                        await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"You choose: {catalogGroceryStore[admin.GetIndexStore()].Name}");
+                        await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"You choose: {nameStore}");
                         await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, "Enter the description of the goods with this context");
-                        await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, "Goods: (name)(space)(price)");
+                        await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, "Goods: (name)(space)(price)(space)(showcases name)");
                         await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"For end set goods print {ConstKeyword.END_INSTALLATION}");
-                        FileXML.SetUser(admin);
                     }
                     else
                         await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"We don't have this store");
                 }
+                else
+                    await botClient.SendTextMessageAsync(user.ChatId, $"You don't have powers for this command: {callbackQuery.Data}");
                 return;
+            }
+            else if (callbackQuery.Data.StartsWith(ConstKeyword.CALLBACK_STORE_GET_CATALOG))
+            {
+                if (user.Rights == Rights.Admin)
+                {
+                    var storesRepository = new StoresRepository(context);
+                    string nameStore = callbackQuery.Data.Split(" ")[1];
+                    var store = storesRepository.GetOwnersStores(user.UserName).FirstOrDefault(s => s.Name == nameStore);
+                    await HandleGoods(botClient, user.ChatId, (GroceryStore)store);
+                }
+                else
+                    await botClient.SendTextMessageAsync(user.ChatId,$"You don't have powers for this command: {callbackQuery.Data}");
             }
             else
             {
@@ -328,17 +369,32 @@ namespace Chepa.Bot
         {
             if (callbackQuery.Data.StartsWith(ConstKeyword.CALLBACK_GOODS))
             {
-                string[] goods = callbackQuery.Data.ToString().Split(' ');
-                if (user is Buyer buyer)
+                string[] goodsWithNamePrice = callbackQuery.Data.ToString().Split(' ');
+                if (user.Rights == Rights.Buyer)
                 {
-                    buyer.ChooseIteams(new Goods(goods[1], Convert.ToInt32(goods[2])));//make statements for second word
-                    FileXML.SetUser(buyer);
-                    await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"You choose: {goods[1]}");
+                    Buyer buyer = new Buyer(user);
+                    StoresRepository storesRepository = new StoresRepository(context);
+                    buyer.Store = storesRepository.GetStoreForBuyer((int)buyer.StoreId);
+                    if (buyer.Store != null)
+                    {
+                        Cart cart = buyer.Store.Carts.FirstOrDefault(c => c.UserId == buyer.UserId && c.IsNewBuyIteamsFromBuyer == true);
+                        if (cart == null)
+                        {
+                            cart = new Cart
+                                    ((int)buyer.StoreId, buyer.UserId, Convert.ToBoolean(1), new Product(goodsWithNamePrice[1], Convert.ToInt32(goodsWithNamePrice[2])));
+                        }
+                        else
+                            cart.AddItem(new Product(goodsWithNamePrice[1], Convert.ToInt32(goodsWithNamePrice[2])));
+                        storesRepository.UpdateCart(cart);
+                        await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"You choose: {goodsWithNamePrice[1]}");
+                    }
+                    else
+                        await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, "We don't have this store.");
                 }
-                else if (user is Admin)
-                    await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"Admin choose: {goods[1]}");
+                else if (user.Rights == Rights.Admin)
+                    await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"Admin choose: {goodsWithNamePrice[1]}");
                 else
-                    await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"You are not buyer or admin. This command not available for you.");
+                    await botClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, $"You don't have powers for this command.");
 
             }
 

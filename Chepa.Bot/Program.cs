@@ -2,6 +2,7 @@
 using System.Threading;
 using Telegram.Bot;
 using Key;
+
 namespace Chepa.Bot
 {
     class Program
@@ -9,7 +10,6 @@ namespace Chepa.Bot
         private static ITelegramBotClient botClient;
         static void Main()
         {
-
             botClient = new TelegramBotClient(PrivateKey.API_TOKEN);
             var me = botClient.GetMeAsync().Result;
             HandleTelegram handleTelegram = new HandleTelegram();

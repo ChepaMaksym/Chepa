@@ -10,6 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Chepa.Bot.Db\Chepa.Bot.Db.csproj" />
     <ProjectReference Include="..\Key\Key.csproj" />
     <ProjectReference Include="..\User\User.csproj" />
     <ProjectReference Include="..\Warehouse\Warehouse.csproj" />

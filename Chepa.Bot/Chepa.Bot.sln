@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Key", "..\Key\Key.csproj", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Warehouse", "..\Warehouse\Warehouse.csproj", "{083540C1-2653-4C60-B818-C41D4E4ED689}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chepa.Bot.Db", "..\Chepa.Bot.Db\Chepa.Bot.Db.csproj", "{1B097278-274C-4856-AFE4-937924488DC9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{083540C1-2653-4C60-B818-C41D4E4ED689}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{083540C1-2653-4C60-B818-C41D4E4ED689}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{083540C1-2653-4C60-B818-C41D4E4ED689}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B097278-274C-4856-AFE4-937924488DC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B097278-274C-4856-AFE4-937924488DC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B097278-274C-4856-AFE4-937924488DC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B097278-274C-4856-AFE4-937924488DC9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
