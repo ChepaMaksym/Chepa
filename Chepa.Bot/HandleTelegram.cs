@@ -122,48 +122,6 @@ namespace Chepa.Bot
                     break;
             }
         }
-
-        //public async Task HandleBuyer(ITelegramBotClient botClient, Message message, User user)
-        //{
-        //    StoresRepository storesRepository = new StoresRepository(context);
-        //    UserRepository userRepository = new UserRepository(context);
-        //    if (storesRepository.IsStore(message.Text[1..]))//without '/' 
-        //    {
-        //        await SetStoreId(botClient, message, user);
-        //        userRepository.Update(user);
-        //        if (user.StoreId != null)//cheak
-        //            await HandleGoods(botClient, user.ChatId, (GroceryStore)storesRepository.GetStore(user.StoreId));//make
-        //    }
-        //    else if (message.Text == ConstKeyword.ORDER)
-        //    {
-        //        Buyer buyer = new Buyer(user);
-        //        buyer.Store = storesRepository.GetStoreForBuyer((int)buyer.StoreId);
-        //        List<string> textItems = buyer.GetChoose();
-        //        if (textItems.Count != 0)
-        //        {
-        //            //make func
-        //            await botClient.SendTextMessageAsync(message.Chat.Id, $"Your check: {buyer.GetCheck()} and items:");
-        //            foreach (var item in textItems)
-        //                await botClient.SendTextMessageAsync(message.Chat.Id, $"{item}");
-        //            buyer.RemoveBuyIteam(buyer.Store.Carts.FirstOrDefault(c => c.UserId == buyer.UserId).CartId);
-        //            storesRepository.Update(buyer.Store);
-
-
-        //        }
-        //        else
-        //            await botClient.SendTextMessageAsync(message.Chat.Id, $"You don't choose goods");
-        //    }
-        //    else if (message.Text == ConstKeyword.START)
-        //    {
-        //        user = new User(message.Chat.Username, message.Chat.Id);
-        //        userRepository.Update(user);
-        //        await HandleMessage(botClient, message, user);
-        //    }
-        //    else
-        //        await HandleMessage(botClient, message, user);
-        //    return;
-        //}
-
         public async Task HandleBuyer(ITelegramBotClient botClient, Message message, User user)
         {
             StoresRepository storesRepository = new StoresRepository(context);

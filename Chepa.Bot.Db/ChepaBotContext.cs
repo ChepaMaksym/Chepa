@@ -2,6 +2,11 @@
 using Key;
 using Warehouse;
 using Warehouse.Manager;
+using System.Threading.Tasks;
+using System.Linq.Expressions;
+using System.Threading;
+using System;
+
 namespace Chepa.Bot.Db
 {
     public class ChepaBotContext : DbContext
@@ -25,6 +30,9 @@ namespace Chepa.Bot.Db
             //    {
             //        System.Console.WriteLine("Bad connection");
             //    }
+        }
+        public ChepaBotContext(DbContextOptions<ChepaBotContext> options): base(options)
+        {
         }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
