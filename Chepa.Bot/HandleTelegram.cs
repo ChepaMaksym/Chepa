@@ -18,10 +18,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chepa.Bot
 {
-    class HandleTelegram
+    public class HandleTelegram
     {
-        ChepaBotContext context = new ChepaBotContext();
-
+        ChepaBotContext context;
+        public HandleTelegram()
+        {
+            context = new ChepaBotContext();
+        }
+        public HandleTelegram(ChepaBotContext chepaBotContext)
+        {
+            context = chepaBotContext;
+        }
         public async Task HandleUpdates(ITelegramBotClient botClient, Update update, CancellationToken token)
         {
             if (update.Type == UpdateType.Message && update?.Message?.Text != null)

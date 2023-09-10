@@ -5,7 +5,7 @@ using Key;
 
 namespace Chepa.Bot
 {
-    class Program
+    public class Program
     {
         private static ITelegramBotClient botClient;
         static void Main()
