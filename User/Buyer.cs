@@ -1,35 +1,44 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Warehouse;
 
-namespace Manager
+namespace Warehouse.Manager
 {
     [DataContract,KnownType(typeof(User))]
     public sealed class Buyer : User
     {
-        [DataMember()]
-        private GroceryStore store;//make set or change
-        public Buyer(string userName, long chartID):base(userName,chartID)
+        public Buyer():base()
         {
-            SetRights(Rights.Buyer);
+
         }
-        public void ChooseIteams(Goods goods, int amount = 1)
+        public Buyer(User user) : base(user)
         {
-            store.BuyIteam(goods, amount);
+            Rights = Rights.Buyer;
         }
-        public void SetStore(Store groceryStore)
+        public Buyer(string userName, long chartID, int userId):base(userName,chartID)
         {
-            store = (GroceryStore)groceryStore;//issue for further
+            Rights = Rights.Buyer;
+            UserId = userId;
         }
-        public GroceryStore GetStore()
+        public void ChooseIteams(Cart cartWithStoreUserId)
         {
-            return store;
+            Store.BuyIteam(cartWithStoreUserId);
         }
-        public string[] GetChoose() => store.GetChooseBuyer();
+        public Store GetStore()
+        {
+            return Store;
+        }
+        public List<string>? GetChoose()
+        {
+            if(Store != null)
+                return Store.GetChooseBuyer();
+            return null;
+        }
         public int GetCheck()
         {
-            return store.GetCheck();
+            return Store.GetCheck();
         }
-        public void RemoveBuyIteam() => store.RemoveBuyIteam();
+        public void RemoveBuyIteam(int cartId) => Store.RemoveCart(cartId);
     }
 }

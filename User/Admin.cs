@@ -6,47 +6,72 @@ using Telegram.Bot.Types;
 using Warehouse;
 using Key;
 using System.Runtime.Serialization;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
 
-namespace Manager
+namespace Warehouse.Manager
 {
     [DataContract, KnownType(typeof(User))]
     public class Admin : User
     {
-        public Admin(string userName, long chartID) : base(userName, chartID)
+        public delegate Task MessageLoadedCallback(ITelegramBotClient botClient, Message message, User user);
+        public delegate void StoreAddedHandler(Store store);
+        public delegate List<Store> OwnerStoresGetedHandler(string owner);
+        public delegate void StoreUpdatedHandler(Store store);
+        public delegate void UserUpdatedHandler(User store);
+        [NotMapped]
+        public StoreAddedHandler StoreAddedEvent { get; set; }
+        [NotMapped]
+        public StoreUpdatedHandler StoreUpdatedEvent { get; set; }
+        [NotMapped]
+        public UserUpdatedHandler UsereUpdatedEvent { get; set; }
+        [NotMapped]
+        public MessageLoadedCallback CatalogHandleEvent { get; set; }
+        [NotMapped]
+        public MessageLoadedCallback MessageHandleEvent { get; set; }
+        [NotMapped]
+        public OwnerStoresGetedHandler OwnerStoresGetedEvent { get; set; }
+        public Admin():base()
         {
-            SetRights(Rights.Admin);
+
+        }
+        public Admin(string userName, long chartID, int userId) : base(userName, chartID)
+        {
+            Rights = Rights.Admin;
+            UserId = userId;
+        }
+        public Admin(User user):base(user)
+        {
+           Rights = Rights.Admin;
         }
 
-        public delegate Task MessageLoadedCallback(ITelegramBotClient botClient, Message message, User user);
-        public MessageLoadedCallback CatalogHandler { get; set; }
-        public MessageLoadedCallback MessageHandler { get; set; }
         public async Task HandleAdmin(ITelegramBotClient botClient, Message message)
         {
             if (message.Text == ConstKeyword.SET_CATALOG)
             {
-                IsSetBuyItem = true;
-                await CatalogHandler(botClient, message, this);
+                await CatalogHandleEvent(botClient, message, this);
                 return;
             }
             else if (message.Text == ConstKeyword.END_INSTALLATION)
             {
                 IsSetBuyItem = false;
-                SetIndexStore(-1);
-                FileXML.SetUser(this);
+                StoreId = null;
+                await botClient.SendTextMessageAsync(message.Chat.Id, "Ended add product");
+                UsereUpdatedEvent(this);
             }
             else if (IsSetBuyItem)
-                await HandleBuyItem(botClient, message, FileXML.GetUserWithNull(message.Chat.Username, message.Chat.Id).GetIndexStore());
+                await HandleShowcase(botClient, message, this);
             else if (message.Text == ConstKeyword.GET_CATALOG)
             {
-                if (FileXML.GetStoreWithNull(message.Chat.Username) == null)
+                if (OwnerStoresGetedEvent(UserName) == null)
                     await botClient.SendTextMessageAsync(message.Chat.Id, "You don't have bot");
                 else
-                    await CatalogHandler(botClient, message, this);
+                    await CatalogHandleEvent(botClient, message, this);
                 return;
             }
             else if (message.Text == ConstKeyword.PERSON_STORE)
             {
-                List<Store> catalogGroceryStore = FileXML.GetStoreWithNull(message.Chat.Username);
+                List<Store> catalogGroceryStore = OwnerStoresGetedEvent(UserName);
                 if (catalogGroceryStore != null)
                 {
                     await botClient.SendTextMessageAsync(message.Chat.Id, "Your bot:");
@@ -60,18 +85,23 @@ namespace Manager
 
             }
             else
-                await MessageHandler(botClient, message, this);
+                await MessageHandleEvent(botClient, message, this);
         }
-        public async Task HandleBuyItem(ITelegramBotClient botClient, Message message, int indexStore)
+        public async Task HandleShowcase(ITelegramBotClient botClient, Message message, User user)
         {
             if (message.Text.StartsWith(ConstKeyword.BEGINNING_GOODS))
             {
-                string[] goods = message.Text[7..].Split(' ');
-                if (goods.Length == 2)
+                string[] productWithShowcase = message.Text[7..].Split(' ');//without Goods:
+                if (productWithShowcase.Length == 3)
                 {
-                    GroceryStore groceryStore = (GroceryStore)FileXML.GetStoreWithNull(message.Chat.Username,indexStore);
-                    groceryStore.SetGoods(new Goods(goods[0], Convert.ToInt32(goods[1])));
-                    FileXML.AddCatalogStore(message.Chat.Username, groceryStore);
+                    GroceryStore groceryStore = (GroceryStore)OwnerStoresGetedEvent(UserName).FirstOrDefault(s => user.StoreId == s.StoreId);
+                    if (groceryStore == null)
+                    {
+                        await botClient.SendTextMessageAsync(message.Chat.Id, "You don't have store.");
+                        return;
+                    }
+                    groceryStore.AddProduct(new Product(productWithShowcase[0], Convert.ToInt32(productWithShowcase[1])), productWithShowcase[2]);
+                    StoreUpdatedEvent(groceryStore);
                 }
                 else
                 {
