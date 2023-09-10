@@ -13,7 +13,7 @@ namespace Chepa.Bot
             botClient = new TelegramBotClient(PrivateKey.API_TOKEN);
             var me = botClient.GetMeAsync().Result;
             HandleTelegram handleTelegram = new HandleTelegram();
-            botClient.StartReceiving(handleTelegram.HandleUpdatesAsync, handleTelegram.HandleError);
+            botClient.StartReceiving(handleTelegram.HandleUpdates, handleTelegram.HandleError);
             Console.WriteLine(
               $"Hello, World! I am {me.FirstName} username {me.Username} and my id {me.Id}.");
             Thread.Sleep(int.MaxValue);
